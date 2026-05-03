@@ -82,6 +82,9 @@
   <label class="field-label">房间号</label>
   <input class="field" id="room-input" placeholder="相同房间号的人可互相聊天">
 
+  <label class="field-label">房间密码（可选，首次创建时设置）</label>
+  <input class="field" id="pass-input" type="password" placeholder="无密码留空；加入有密码的房间时必填">
+
   <label class="field-label">用户名</label>
   <input class="field" id="user-input" placeholder="你的昵称">
 
@@ -208,6 +211,7 @@ const tipEl     = $("login-tip");
 $("join-btn").onclick = async () => {
   const server = $("server-input").value.trim();
   const room   = $("room-input").value.trim();
+  const pass   = $("pass-input").value;
   const user   = $("user-input").value.trim();
   if (!server || !room || !user) { setTip("请填写所有字段", true); return; }
   username = user;
@@ -216,9 +220,10 @@ $("join-btn").onclick = async () => {
   setTip("正在生成加密密钥...");
   await Crypto.init();
   setTip("正在建立连接...");
-  connect(server, room, user);
+  connect(server, room, user, pass);
 };
 
+$("pass-input").onkeydown = e => { if(e.key==="Enter") $("user-input").focus(); };
 $("user-input").onkeydown = e => { if(e.key==="Enter") $("join-btn").click(); };
 
 function setTip(msg, isErr=false) {
@@ -227,13 +232,14 @@ function setTip(msg, isErr=false) {
 }
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────
-async function connect(server, room, user) {
+async function connect(server, room, user, pass) {
   try {
     ws = new WebSocket(server);
     ws.onopen = async () => {
       ws.send(JSON.stringify({
         type: "join", room_id: room, username: user,
-        public_key: await Crypto.exportPublicKeyPEM()
+        public_key: await Crypto.exportPublicKeyPEM(),
+        password: pass || ""
       }));
     };
     ws.onmessage = e => handleMsg(JSON.parse(e.data));
